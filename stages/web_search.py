@@ -61,6 +61,56 @@ class WebSearchError(Exception):
     """Raised when the reverse-image search returns no usable results."""
 
 
+def _upload_image_for_url(image_path) -> str:
+    """
+    Upload a local image to a free temporary host and return its public URL.
+
+    Tries 0x0.st first (no auth), then falls back to file.io.
+    The URL is used to pass the image to SerpAPI Google Lens.
+    """
+    path = Path(image_path)
+
+    # --- Primary host: 0x0.st (no account required) ---
+    try:
+        log.info("Hosting image on 0x0.st for URL-based search ...")
+        with open(path, "rb") as f:
+            resp = requests.post(
+                "https://0x0.st",
+                files={"file": (path.name, f, "image/jpeg")},
+                timeout=30,
+            )
+        if resp.status_code == 200 and resp.text.strip().startswith("http"):
+            url = resp.text.strip()
+            log.info("Image hosted at: %s", url)
+            return url
+        log.warning("0x0.st returned unexpected response (%d), trying fallback ...", resp.status_code)
+    except Exception as exc:
+        log.warning("0x0.st upload failed (%s), trying fallback ...", exc)
+
+    # --- Fallback host: file.io (free, expires after first download) ---
+    try:
+        log.info("Hosting image on file.io ...")
+        with open(path, "rb") as f:
+            resp = requests.post(
+                "https://file.io",
+                files={"file": (path.name, f, "image/jpeg")},
+                timeout=30,
+            )
+        if resp.status_code == 200:
+            data = resp.json()
+            url = data.get("link", "")
+            if url:
+                log.info("Image hosted at: %s", url)
+                return url
+    except Exception as exc:
+        log.warning("file.io upload also failed: %s", exc)
+
+    raise WebSearchError(
+        "Could not upload image to a temporary host for URL-based search. "
+        "Check your internet connection."
+    )
+
+
 def reverse_image_search(image_path: str, mock: bool = False) -> dict:
     """
     Perform a reverse-image search for image_path using SerpAPI Google Lens.
@@ -94,21 +144,23 @@ def reverse_image_search(image_path: str, mock: bool = False) -> dict:
     if not path.exists():
         raise FileNotFoundError("Image not found: {}".format(path))
 
-    log.info("Uploading image to SerpAPI Google Lens: %s", path.name)
+    # SerpAPI Google Lens requires a public URL (not a direct file upload).
+    # We temporarily host the image on a free public host first.
+    image_url = _upload_image_for_url(path)
 
-    with open(path, "rb") as img_file:
-        params = {
-            "engine": "google_lens",
-            "api_key": api_key,
-        }
-        files = {"image_file": (path.name, img_file, "image/jpeg")}
+    log.info("Querying SerpAPI Google Lens with image URL ...")
 
-        response = requests.post(
-            SERPAPI_ENDPOINT,
-            params=params,
-            files=files,
-            timeout=60,
-        )
+    params = {
+        "engine": "google_lens",
+        "api_key": api_key,
+        "url": image_url,
+    }
+
+    response = requests.get(
+        SERPAPI_ENDPOINT,
+        params=params,
+        timeout=60,
+    )
 
     if response.status_code != 200:
         raise WebSearchError(
