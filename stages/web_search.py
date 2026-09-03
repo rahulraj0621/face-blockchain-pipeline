@@ -61,53 +61,111 @@ class WebSearchError(Exception):
     """Raised when the reverse-image search returns no usable results."""
 
 
+def _resize_image_for_upload(image_path) -> bytes:
+    """
+    Resize image to max 800px on any side and return JPEG bytes.
+    Reduces a 2-3MB photo down to ~50-100KB for fast, reliable upload.
+    """
+    from PIL import Image
+    import io
+
+    img = Image.open(image_path).convert("RGB")
+    img.thumbnail((800, 800), Image.LANCZOS)  # shrink in-place, keep aspect ratio
+
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=85)
+    buf.seek(0)
+    size_kb = len(buf.getvalue()) // 1024
+    log.info("Image resized to %dx%d (%d KB) for upload.", img.width, img.height, size_kb)
+    return buf.getvalue()
+
+
 def _upload_image_for_url(image_path) -> str:
     """
     Upload a local image to a free temporary host and return its public URL.
 
-    Tries 0x0.st first (no auth), then falls back to file.io.
-    The URL is used to pass the image to SerpAPI Google Lens.
+    Resizes the image first (to ~800px max), then tries multiple free hosts
+    in order: catbox.moe -> uguu.se -> 0x0.st -> file.io
     """
-    path = Path(image_path)
+    img_bytes = _resize_image_for_upload(image_path)
+    fname = "face_search.jpg"
 
-    # --- Primary host: 0x0.st (no account required) ---
+    # --- Host 1: catbox.moe (very reliable, permanent, no auth) ---
     try:
-        log.info("Hosting image on 0x0.st for URL-based search ...")
-        with open(path, "rb") as f:
-            resp = requests.post(
-                "https://0x0.st",
-                files={"file": (path.name, f, "image/jpeg")},
-                timeout=30,
-            )
+        log.info("Hosting image on catbox.moe ...")
+        resp = requests.post(
+            "https://catbox.moe/user/api.php",
+            data={"reqtype": "fileupload"},
+            files={"fileToUpload": (fname, img_bytes, "image/jpeg")},
+            timeout=30,
+        )
         if resp.status_code == 200 and resp.text.strip().startswith("http"):
             url = resp.text.strip()
             log.info("Image hosted at: %s", url)
             return url
-        log.warning("0x0.st returned unexpected response (%d), trying fallback ...", resp.status_code)
+        log.warning("catbox.moe response (%d): %s", resp.status_code, resp.text[:80])
     except Exception as exc:
-        log.warning("0x0.st upload failed (%s), trying fallback ...", exc)
+        log.warning("catbox.moe failed: %s", exc)
 
-    # --- Fallback host: file.io (free, expires after first download) ---
+    # --- Host 2: uguu.se (temporary, 48h, no auth) ---
     try:
-        log.info("Hosting image on file.io ...")
-        with open(path, "rb") as f:
-            resp = requests.post(
-                "https://file.io",
-                files={"file": (path.name, f, "image/jpeg")},
-                timeout=30,
-            )
+        log.info("Hosting image on uguu.se ...")
+        resp = requests.post(
+            "https://uguu.se/upload",
+            files={"files[]": (fname, img_bytes, "image/jpeg")},
+            timeout=30,
+        )
         if resp.status_code == 200:
             data = resp.json()
-            url = data.get("link", "")
-            if url:
+            files = data.get("files", [])
+            if files and files[0].get("url"):
+                url = files[0]["url"]
                 log.info("Image hosted at: %s", url)
                 return url
+        log.warning("uguu.se response (%d): %s", resp.status_code, resp.text[:80])
     except Exception as exc:
-        log.warning("file.io upload also failed: %s", exc)
+        log.warning("uguu.se failed: %s", exc)
+
+    # --- Host 3: 0x0.st ---
+    try:
+        log.info("Hosting image on 0x0.st ...")
+        resp = requests.post(
+            "https://0x0.st",
+            files={"file": (fname, img_bytes, "image/jpeg")},
+            timeout=30,
+        )
+        if resp.status_code == 200 and resp.text.strip().startswith("http"):
+            url = resp.text.strip()
+            log.info("Image hosted at: %s", url)
+            return url
+        log.warning("0x0.st response (%d): %s", resp.status_code, resp.text[:80])
+    except Exception as exc:
+        log.warning("0x0.st failed: %s", exc)
+
+    # --- Host 4: file.io ---
+    try:
+        log.info("Hosting image on file.io ...")
+        resp = requests.post(
+            "https://file.io/?expires=1h",
+            files={"file": (fname, img_bytes, "image/jpeg")},
+            timeout=30,
+        )
+        if resp.status_code in (200, 201):
+            try:
+                data = resp.json()
+                url = data.get("link") or data.get("url", "")
+                if url:
+                    log.info("Image hosted at: %s", url)
+                    return url
+            except Exception:
+                pass
+        log.warning("file.io response (%d): %s", resp.status_code, resp.text[:80])
+    except Exception as exc:
+        log.warning("file.io failed: %s", exc)
 
     raise WebSearchError(
-        "Could not upload image to a temporary host for URL-based search. "
-        "Check your internet connection."
+        "All image hosts failed. Check your internet connection, "
+        "or run with --mock flag for offline mode."
     )
 
 
