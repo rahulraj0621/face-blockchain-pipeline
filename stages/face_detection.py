@@ -1,12 +1,12 @@
 """
 stages/face_detection.py
-─────────────────────────
-Stage 1 – Face Detection & Encoding
+------------------------
+Stage 1 - Face Detection & Encoding
 
 Given a path to an image:
-  • Detects faces using face_recognition (dlib under the hood).
-  • Returns the 128-dimensional face encoding.
-  • Also returns a SHA-256 hash of that encoding for downstream use.
+  - Detects faces using face_recognition (dlib under the hood).
+  - Returns the 128-dimensional face encoding.
+  - Also returns a SHA-256 hash of that encoding for downstream use.
 
 Dependencies:  face_recognition, numpy, Pillow
 """
@@ -31,7 +31,7 @@ class FaceDetectionError(Exception):
 
 def detect_and_encode(image_path: str) -> dict:
     """
-    Detect a face in *image_path* and return its 128-d encoding plus metadata.
+    Detect a face in image_path and return its 128-d encoding plus metadata.
 
     Parameters
     ----------
@@ -41,15 +41,15 @@ def detect_and_encode(image_path: str) -> dict:
     Returns
     -------
     dict with keys:
-        image_path      – original path (str)
-        face_count      – number of faces found (int)
-        encoding        – 128-element list of floats
-        encoding_hash   – SHA-256 hex of the JSON-serialised encoding (str)
-        face_location   – (top, right, bottom, left) tuple of the primary face
+        image_path      - original path (str)
+        face_count      - number of faces found (int)
+        encoding        - 128-element list of floats
+        encoding_hash   - SHA-256 hex of the JSON-serialised encoding (str)
+        face_location   - (top, right, bottom, left) of the primary face
     """
     path = Path(image_path).resolve()
     if not path.exists():
-        raise FileNotFoundError(f"Image not found: {path}")
+        raise FileNotFoundError("Image not found: {}".format(path))
 
     log.info("Loading image: %s", path)
 
@@ -57,23 +57,23 @@ def detect_and_encode(image_path: str) -> dict:
     pil_img = Image.open(path).convert("RGB")
     img_array = np.array(pil_img)
 
-    log.info("Detecting face locations …")
+    log.info("Detecting face locations ...")
     locations = face_recognition.face_locations(img_array, model="hog")
     face_count = len(locations)
 
     if face_count == 0:
         raise FaceDetectionError(
-            f"No face detected in '{path.name}'. "
-            "Please supply an image with a clearly visible face."
+            "No face detected in '{}'. "
+            "Please supply an image with a clearly visible face.".format(path.name)
         )
 
     if face_count > 1:
         log.warning(
-            "%d faces detected – using the largest (first) face for encoding.",
+            "%d faces detected - using the largest (first) face for encoding.",
             face_count,
         )
 
-    log.info("Encoding face …")
+    log.info("Encoding face ...")
     encodings = face_recognition.face_encodings(img_array, known_face_locations=locations)
     if not encodings:
         raise FaceDetectionError("Face location found but encoding failed.")
@@ -100,14 +100,14 @@ def detect_and_encode(image_path: str) -> dict:
     }
 
     log.info(
-        "Face detected ✓  location=%s  encoding_hash=%s…",
+        "Face detected [OK]  location=%s  encoding_hash=%s...",
         primary_location,
         encoding_hash[:16],
     )
     return result
 
 
-# ── Quick self-test ────────────────────────────────────────────────────────────
+# Quick self-test
 if __name__ == "__main__":
     import sys
 

@@ -1,0 +1,5 @@
+pipeline.py: OK
+stages/face_detection.py: ["'–'", "'•'", "'…'", "'─'", "'✓'"]
+stages/web_search.py: ["'–'", "'─'", "'✓'"]
+stages/blockchain.py: ["'–'", "'…'", "'─'", "'✓'", "'✗'"]
+utils/logger.py: ["'–'", "'→'"]

@@ -1,7 +1,7 @@
 """
 stages/web_search.py
-─────────────────────
-Stage 2 – Reverse Image Search
+--------------------
+Stage 2 - Reverse Image Search
 
 Uses the SerpAPI Google Lens endpoint to perform a genuine reverse-image search
 and returns structured social-media / web results.
@@ -9,7 +9,7 @@ and returns structured social-media / web results.
 API docs: https://serpapi.com/google-lens-api
 
 Environment variables required (in .env):
-    SERPAPI_KEY – your SerpAPI API key
+    SERPAPI_KEY - your SerpAPI API key
 
 Mock mode (--mock flag or MOCK_MODE=1):
     Returns a pre-defined result without hitting any external API.
@@ -17,9 +17,7 @@ Mock mode (--mock flag or MOCK_MODE=1):
 
 import json
 import os
-import time
 from pathlib import Path
-from typing import Optional
 
 import requests
 
@@ -29,14 +27,14 @@ log = get_logger("web_search")
 
 SERPAPI_ENDPOINT = "https://serpapi.com/search.json"
 
-# ── Mock data for offline / demo use ──────────────────────────────────────────
+# Mock data for offline / demo use
 MOCK_RESULT = {
     "engine": "google_lens [MOCK]",
     "search_url": "https://lens.google.com/search?p=MOCK",
     "results": [
         {
             "position": 1,
-            "title": "Sample Person – LinkedIn Profile [MOCK]",
+            "title": "Sample Person - LinkedIn Profile [MOCK]",
             "link": "https://www.linkedin.com/in/sample-person-mock",
             "source": "LinkedIn",
             "thumbnail": "https://via.placeholder.com/150",
@@ -51,7 +49,7 @@ MOCK_RESULT = {
     ],
     "best_match": {
         "position": 1,
-        "title": "Sample Person – LinkedIn Profile [MOCK]",
+        "title": "Sample Person - LinkedIn Profile [MOCK]",
         "link": "https://www.linkedin.com/in/sample-person-mock",
         "source": "LinkedIn",
         "thumbnail": "https://via.placeholder.com/150",
@@ -65,7 +63,7 @@ class WebSearchError(Exception):
 
 def reverse_image_search(image_path: str, mock: bool = False) -> dict:
     """
-    Perform a reverse-image search for *image_path* using SerpAPI Google Lens.
+    Perform a reverse-image search for image_path using SerpAPI Google Lens.
 
     Parameters
     ----------
@@ -77,10 +75,10 @@ def reverse_image_search(image_path: str, mock: bool = False) -> dict:
     Returns
     -------
     dict with keys:
-        engine      – search engine description
-        search_url  – URL that was searched
-        results     – list of result dicts (position, title, link, source, thumbnail)
-        best_match  – the top result dict
+        engine      - search engine description
+        search_url  - URL that was searched
+        results     - list of result dicts (position, title, link, source, thumbnail)
+        best_match  - the top result dict
     """
     if mock or os.getenv("MOCK_MODE", "0") == "1":
         log.info("[MOCK] Returning pre-defined reverse-image search result.")
@@ -94,11 +92,10 @@ def reverse_image_search(image_path: str, mock: bool = False) -> dict:
 
     path = Path(image_path).resolve()
     if not path.exists():
-        raise FileNotFoundError(f"Image not found: {path}")
+        raise FileNotFoundError("Image not found: {}".format(path))
 
     log.info("Uploading image to SerpAPI Google Lens: %s", path.name)
 
-    # SerpAPI Google Lens accepts an image URL or uploads via multipart form
     with open(path, "rb") as img_file:
         params = {
             "engine": "google_lens",
@@ -115,12 +112,12 @@ def reverse_image_search(image_path: str, mock: bool = False) -> dict:
 
     if response.status_code != 200:
         raise WebSearchError(
-            f"SerpAPI returned HTTP {response.status_code}: {response.text[:300]}"
+            "SerpAPI returned HTTP {}: {}".format(response.status_code, response.text[:300])
         )
 
     data = response.json()
 
-    # ── Parse visual matches ──────────────────────────────────────────────────
+    # Parse visual matches
     raw_results = data.get("visual_matches") or data.get("organic_results") or []
 
     if not raw_results:
@@ -144,7 +141,7 @@ def reverse_image_search(image_path: str, mock: bool = False) -> dict:
     best = parsed[0]
 
     log.info(
-        "Search complete ✓  %d results found. Best match: '%s' @ %s",
+        "Search complete [OK]  %d results found. Best match: '%s' @ %s",
         len(parsed),
         best["title"][:60],
         best["link"][:80],
@@ -176,7 +173,7 @@ def extract_post_metadata(search_result: dict) -> dict:
     }
 
 
-# ── Quick self-test ────────────────────────────────────────────────────────────
+# Quick self-test
 if __name__ == "__main__":
     import sys
     from dotenv import load_dotenv
@@ -187,7 +184,7 @@ if __name__ == "__main__":
 
     result = reverse_image_search(img, mock=use_mock)
     meta = extract_post_metadata(result)
-    print("\n── Search Result ──────────────────────────────")
+    print("\n-- Search Result --")
     print(json.dumps(result, indent=2))
-    print("\n── Post Metadata (for blockchain) ─────────────")
+    print("\n-- Post Metadata (for blockchain) --")
     print(json.dumps(meta, indent=2))

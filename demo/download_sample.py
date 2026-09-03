@@ -16,25 +16,17 @@ from pathlib import Path
 
 OUTPUT_PATH = Path(__file__).parent / "sample_face.jpg"
 
-# Sources in priority order - tries each until one succeeds
+# Public-domain portrait images (direct full-resolution URLs)
+# All sourced from Wikimedia Commons
 SOURCES = [
-    # AI-generated face (thispersondoesnotexist) - refreshes on each request
-    "https://thispersondoesnotexist.com/",
-    # Fallback: Wikimedia Commons public-domain portraits (correct sizes)
-    (
-        "https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/"
-        "Albert_Einstein_1947.jpg/220px-Albert_Einstein_1947.jpg"
-    ),
-    (
-        "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/"
-        "Abraham_Lincoln_O-77_matte_collodion_print.jpg/"
-        "220px-Abraham_Lincoln_O-77_matte_collodion_print.jpg"
-    ),
-    (
-        "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/"
-        "Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/"
-        "402px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg"
-    ),
+    # Albert Einstein - public domain
+    "https://upload.wikimedia.org/wikipedia/commons/d/d3/Albert_Einstein_Head.jpg",
+    # Abraham Lincoln - public domain
+    "https://upload.wikimedia.org/wikipedia/commons/a/ab/Abraham_Lincoln_O-77_by_Gardner%2C_1863.jpg",
+    # Marie Curie - public domain
+    "https://upload.wikimedia.org/wikipedia/commons/c/c8/Marie_Curie_c._1920s.jpg",
+    # Thomas Edison - public domain
+    "https://upload.wikimedia.org/wikipedia/commons/9/9d/Thomas_Edison2.jpg",
 ]
 
 HEADERS = {
@@ -45,6 +37,9 @@ HEADERS = {
     ),
     "Accept": "image/jpeg,image/*;q=0.9,*/*;q=0.8",
 }
+
+
+
 
 
 def download_sample():
