@@ -128,9 +128,9 @@ def _send_transaction(fingerprint: str, w3, private_key: str, address: str) -> s
     tx_hash_hex = tx_hash.hex()
 
     log.info("Transaction broadcast [OK]  tx_hash=%s", tx_hash_hex)
-    log.info("Waiting for receipt (up to 120 s) ...")
+    log.info("Waiting for receipt (up to 300 s) ...")
 
-    receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
+    receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=300)
     if receipt["status"] != 1:
         raise RuntimeError("Transaction failed on-chain: {}".format(receipt))
 

@@ -227,25 +227,64 @@ def reverse_image_search(image_path: str, mock: bool = False) -> dict:
 
     data = response.json()
 
-    # Parse visual matches
-    raw_results = data.get("visual_matches") or data.get("organic_results") or []
-
-    if not raw_results:
-        raise WebSearchError(
-            "SerpAPI returned no visual matches for the given image. "
-            "Try a different face image or check your API key."
-        )
+    # Log all top-level keys so we can see what SerpAPI returned
+    log.info("SerpAPI response keys: %s", list(data.keys()))
 
     parsed = []
-    for idx, item in enumerate(raw_results[:10], start=1):
-        parsed.append(
-            {
+
+    # --- Priority 1: visual_matches (direct image similarity hits) ---
+    for idx, item in enumerate(data.get("visual_matches", [])[:10], start=1):
+        parsed.append({
+            "position": idx,
+            "title": item.get("title", ""),
+            "link": item.get("link", ""),
+            "source": item.get("source", ""),
+            "thumbnail": item.get("thumbnail", ""),
+            "match_type": "visual",
+        })
+
+    # --- Priority 2: knowledge_graph (Google's identity panel) ---
+    kg = data.get("knowledge_graph", {})
+    if kg and not parsed:
+        parsed.append({
+            "position": 1,
+            "title": kg.get("title", "") + " - " + kg.get("type", ""),
+            "link": kg.get("website", kg.get("knowledge_graph_search_link", "")),
+            "source": "Google Knowledge Graph",
+            "thumbnail": kg.get("image", ""),
+            "match_type": "knowledge_graph",
+        })
+
+    # --- Priority 3: text_results ---
+    for idx, item in enumerate(data.get("text_results", [])[:10], start=len(parsed)+1):
+        parsed.append({
+            "position": idx,
+            "title": item.get("title", ""),
+            "link": item.get("link", ""),
+            "source": item.get("displayed_link", ""),
+            "thumbnail": "",
+            "match_type": "text",
+        })
+
+    # --- Priority 4: organic_results (generic fallback) ---
+    if not parsed:
+        for idx, item in enumerate(data.get("organic_results", [])[:10], start=1):
+            parsed.append({
                 "position": idx,
                 "title": item.get("title", ""),
                 "link": item.get("link", ""),
-                "source": item.get("source", ""),
+                "source": item.get("displayed_link", ""),
                 "thumbnail": item.get("thumbnail", ""),
-            }
+                "match_type": "organic",
+            })
+
+    if not parsed:
+        # Dump raw response for debugging
+        import json as _json
+        log.warning("Full SerpAPI response: %s", _json.dumps(data, indent=2)[:1000])
+        raise WebSearchError(
+            "SerpAPI returned no results of any type for this image. "
+            "Try a higher-quality, larger face photo, or run with --mock."
         )
 
     best = parsed[0]
