@@ -568,13 +568,42 @@ function startScan() {
 
 /* ── Poll job ───────────────────────────── */
 function pollJob(job_id) {
+  let attempts = 0;
   pollInterval = setInterval(() => {
+    attempts++;
     fetch('/status/' + job_id)
       .then(r => r.json())
       .then(job => {
         renderLogs(job.logs || []);
+
+        // Show live stage progress in candidate box
+        const logs = job.logs || [];
+        if (logs.length > 0) {
+          const last = logs[logs.length - 1];
+          document.getElementById('cand-name').textContent = last.msg.substring(0, 50) + '...';
+          document.getElementById('cand-source').textContent = '⏳ Stage ' + last.stage + ' running...';
+        }
+
         if (job.status === 'done')  { clearInterval(pollInterval); renderDone(job); }
-        if (job.status === 'error') { clearInterval(pollInterval); showError(job.error); }
+        if (job.status === 'error') {
+          clearInterval(pollInterval);
+          showError(job.error || 'Pipeline failed. Check Railway Console logs.');
+          // Show error in candidate box too
+          document.getElementById('cand-name').textContent = 'Scan Failed';
+          document.getElementById('cand-source').textContent = '❌ ' + (job.error || 'Unknown error');
+          document.getElementById('cand-badge').textContent = 'ERROR';
+          document.getElementById('cand-badge').className = 'unconfirmed-badge';
+        }
+
+        // Timeout after 5 minutes
+        if (attempts > 200 && job.status === 'running') {
+          clearInterval(pollInterval);
+          showError('Scan timed out after 5 minutes. Railway free tier has limited CPU — try again or use mock mode.');
+        }
+      })
+      .catch(err => {
+        // Network error — keep trying
+        console.warn('Poll error:', err);
       });
   }, 1500);
 }
