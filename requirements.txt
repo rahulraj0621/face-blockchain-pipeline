@@ -1,4 +1,3 @@
-mediapipe
 opencv-python-headless
 Pillow
 requests
