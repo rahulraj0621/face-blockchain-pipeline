@@ -50,8 +50,8 @@ def _log(job_id, stage, msg, status="running"):
 
 # ---------- Face similarity helper ----------
 def compute_similarity(input_encoding_list, thumbnail_url):
-    """Download thumbnail, find face, return similarity % vs input encoding."""
-    import face_recognition
+    """Download thumbnail, detect face, return similarity % vs input encoding."""
+    import mediapipe as mp
     try:
         resp = http_requests.get(
             thumbnail_url, timeout=10,
@@ -59,16 +59,42 @@ def compute_similarity(input_encoding_list, thumbnail_url):
         )
         if resp.status_code != 200:
             return 0.0
+
         pil = Image.open(io.BytesIO(resp.content)).convert("RGB")
-        arr = np.array(pil)
-        encs = face_recognition.face_encodings(arr)
-        if not encs:
+        img_array = np.array(pil)
+        h, w = img_array.shape[:2]
+
+        # Detect face in matched image
+        mp_face = mp.solutions.face_detection
+        with mp_face.FaceDetection(model_selection=1, min_detection_confidence=0.4) as det:
+            results = det.process(img_array)
+
+        if not results.detections:
             return 0.0
-        inp = np.array(input_encoding_list)
-        dist = face_recognition.face_distance([inp], encs[0])[0]
-        return round(max(0.0, (1.0 - float(dist)) * 100.0), 1)
+
+        # Crop and encode
+        bb = results.detections[0].location_data.relative_bounding_box
+        left   = max(0, int(bb.xmin * w))
+        top    = max(0, int(bb.ymin * h))
+        right  = min(w, int((bb.xmin + bb.width)  * w))
+        bottom = min(h, int((bb.ymin + bb.height) * h))
+
+        face_crop = pil.crop((left, top, right, bottom)).resize((64, 64))
+        face_pixels = np.array(face_crop).flatten().astype(np.float32) / 255.0
+        step = len(face_pixels) // 128
+        match_enc = face_pixels[::step][:128]
+
+        # Cosine similarity between input and match encoding
+        inp = np.array(input_encoding_list[:128])
+        dot = np.dot(inp, match_enc)
+        norm = np.linalg.norm(inp) * np.linalg.norm(match_enc)
+        if norm == 0:
+            return 0.0
+        similarity = (dot / norm) * 100.0
+        return round(float(max(0.0, similarity)), 1)
     except Exception:
         return 0.0
+
 
 
 # ---------- Background pipeline runner ----------

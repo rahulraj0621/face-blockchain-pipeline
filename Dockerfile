@@ -1,31 +1,21 @@
-# Use official Python slim image
+# Simple Python image - no build tools needed (MediaPipe is pure pip)
 FROM python:3.11-slim
 
-# Install system build tools needed for dlib (C++ face detection)
+# Only need libGL for opencv headless
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    cmake \
-    libopenblas-dev \
-    libx11-6 \
+    libgl1 \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
 WORKDIR /app
 
-# Copy requirements and install Python packages
-# Install dlib first (needs cmake, takes ~5 mins to compile)
+# Install Python packages (all pure pip - no C++ compilation!)
 COPY requirements.txt .
-RUN pip install --no-cache-dir dlib==19.24.2
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy rest of the project
+# Copy project files
 COPY . .
-
-# Create uploads directory
 RUN mkdir -p uploads
 
-# Expose port (Railway sets $PORT automatically)
-EXPOSE 8080
-
-# Start gunicorn
+# Railway sets $PORT automatically
 CMD gunicorn app:app --bind 0.0.0.0:$PORT --timeout 300 --workers 1 --threads 4
