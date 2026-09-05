@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI Face Engine v2.4 – Hackathon</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #f4f5f8;
+    color: #1a1a2e;
+    min-height: 100vh;
+  }
+
+  /* ── Header ─────────────────────────────── */
+  header {
+    background: linear-gradient(135deg, #6b1a3a 0%, #8b1a4a 50%, #4a1a6b 100%);
+    color: #fff;
+    padding: 0 28px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .logo-box {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    border: 2px solid rgba(255,255,255,0.4);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 13px; letter-spacing: 1px;
+  }
+  .brand-text h1 { font-size: 13px; font-weight: 700; letter-spacing: 2px; }
+  .brand-text p  { font-size: 10px; opacity: 0.7; letter-spacing: 1.5px; }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .deep-search-badge {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 20px; padding: 5px 14px;
+    font-size: 12px; font-weight: 600;
+  }
+  .pulse {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #4ade80;
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; transform:scale(1); }
+    50%      { opacity:0.5; transform:scale(1.3); }
+  }
+  .system-badge {
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 8px; padding: 6px 12px; text-align: center;
+  }
+  .system-badge .label { font-size: 8px; opacity: 0.7; letter-spacing: 1.5px; }
+  .system-badge .val   { font-size: 11px; font-weight: 700; letter-spacing: 1px; }
+
+  /* ── Hero text ───────────────────────────── */
+  .hero { padding: 28px 28px 12px; }
+  .powered { display: inline-flex; align-items: center; gap: 6px; font-size: 11px;
+             font-weight: 700; letter-spacing: 1.5px; color: #e85d8a;
+             background: #fef0f5; border: 1px solid #f9c2d6;
+             border-radius: 20px; padding: 3px 12px; margin-bottom: 10px; }
+  .hero h2 { font-size: 36px; font-weight: 800; line-height: 1.1; }
+  .hero h2 span { color: #3b82f6; }
+  .hero p  { font-size: 14px; color: #64748b; margin: 8px 0 14px; }
+  .hero p strong { color: #e85d8a; }
+  .networks { display: flex; gap: 8px; flex-wrap: wrap; }
+  .net-tag {
+    display: flex; align-items: center; gap: 5px;
+    background: #fff; border: 1px solid #e2e8f0;
+    border-radius: 20px; padding: 4px 12px;
+    font-size: 12px; font-weight: 500; color: #374151;
+  }
+  .dot { width: 6px; height: 6px; border-radius: 50%; }
+
+  /* ── Main grid ───────────────────────────── */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding: 16px 28px;
+  }
+  @media (max-width: 800px) { .main-grid { grid-template-columns: 1fr; } }
+
+  .card {
+    background: #fff;
+    border: 1px solid #e8ecf0;
+    border-radius: 14px;
+    padding: 22px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+  }
+  .card-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px;
+  }
+  .step-badge {
+    background: #1e293b; color: #fff;
+    border-radius: 6px; padding: 2px 8px;
+    font-size: 10px; font-weight: 700; letter-spacing: 1px; margin-right: 8px;
+  }
+  .card-title { font-size: 16px; font-weight: 700; }
+  .card-tag   { font-size: 10px; letter-spacing: 1.5px; color: #94a3b8; font-weight: 600; }
+
+  /* ── Upload area ─────────────────────────── */
+  #drop-zone {
+    border: 2px dashed #bfdbfe;
+    background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+    border-radius: 12px;
+    height: 200px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    cursor: pointer; position: relative;
+    overflow: hidden; transition: border-color .2s;
+  }
+  #drop-zone:hover { border-color: #3b82f6; }
+  #drop-zone img {
+    width: 100%; height: 100%;
+    object-fit: cover; position: absolute; inset: 0;
+    border-radius: 10px;
+  }
+  .drop-label {
+    text-align: center; z-index: 1; pointer-events: none;
+    background: rgba(255,255,255,0.85);
+    border-radius: 8px; padding: 10px 20px;
+  }
+  .drop-label .icon { font-size: 28px; margin-bottom: 4px; }
+  .drop-label p { font-size: 13px; color: #64748b; }
+  .drop-overlay {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: rgba(0,0,0,0.55); color: #fff;
+    text-align: center; padding: 6px; font-size: 12px; font-weight: 600;
+    z-index: 2; display: none;
+  }
+  #file-input { display: none; }
+
+  /* ── Repositories ────────────────────────── */
+  .repos { margin-top: 14px; }
+  .repos label.section { font-size: 11px; font-weight: 700;
+                          letter-spacing: 1.5px; color: #64748b; display: block; margin-bottom: 8px; }
+  .repo-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .repo-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #374151; }
+  .repo-item input[type=checkbox] { accent-color: #3b82f6; width: 15px; height: 15px; }
+
+  .btn-row { display: flex; gap: 10px; margin-top: 16px; }
+  .btn-ghost {
+    flex: 0 0 auto; padding: 10px 18px;
+    border: 1.5px solid #e2e8f0; border-radius: 8px;
+    background: #fff; font-size: 13px; font-weight: 600;
+    cursor: pointer; color: #374151; transition: border-color .2s;
+  }
+  .btn-ghost:hover { border-color: #3b82f6; color: #3b82f6; }
+  .btn-search {
+    flex: 1; padding: 11px 18px;
+    background: linear-gradient(135deg, #e85d8a, #c2185b);
+    color: #fff; border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    letter-spacing: 0.5px; transition: opacity .2s; display: flex;
+    align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-search:hover   { opacity: 0.9; }
+  .btn-search:disabled{ opacity: 0.5; cursor: not-allowed; }
+
+  /* ── Right panel cards ───────────────────── */
+  .match-tag {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+    color: #3b82f6; background: #eff6ff; border: 1px solid #bfdbfe;
+    border-radius: 20px; padding: 2px 10px;
+  }
+  .candidate-box {
+    display: flex; gap: 14px; align-items: flex-start;
+    background: #f8fafc; border: 1px solid #e2e8f0;
+    border-radius: 10px; padding: 14px; margin-top: 4px;
+  }
+  .candidate-photo {
+    width: 80px; height: 80px; border-radius: 8px;
+    object-fit: cover; background: #e2e8f0; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; color: #94a3b8;
+  }
+  .candidate-photo img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+  .candidate-info { flex: 1; min-width: 0; }
+  .cand-label { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: #3b82f6; }
+  .cand-match { font-size: 11px; font-weight: 700; color: #10b981; margin-left: auto; }
+  .cand-name  { font-size: 15px; font-weight: 700; margin: 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cand-source{ font-size: 12px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .unconfirmed-badge {
+    font-size: 9px; font-weight: 700; letter-spacing: 1px;
+    background: #fef3c7; color: #92400e; border: 1px solid #fcd34d;
+    border-radius: 4px; padding: 2px 6px;
+  }
+  .confirmed-badge {
+    font-size: 9px; font-weight: 700; letter-spacing: 1px;
+    background: #dcfce7; color: #166534; border: 1px solid #86efac;
+    border-radius: 4px; padding: 2px 6px;
+  }
+
+  /* ── Biometric Verification ──────────────── */
+  .bio-result {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px; border-radius: 10px; margin: 10px 0;
+  }
+  .bio-result.no-match { background: #fff5f5; border: 1px solid #fecaca; }
+  .bio-result.matched  { background: #f0fdf4; border: 1px solid #bbf7d0; }
+  .bio-icon { width: 30px; height: 30px; border-radius: 50%;
+              display: flex; align-items: center; justify-content: center;
+              font-size: 16px; }
+  .no-match .bio-icon { background: #fee2e2; }
+  .matched  .bio-icon { background: #dcfce7; }
+  .bio-text h3 { font-size: 15px; font-weight: 800; }
+  .no-match .bio-text h3 { color: #dc2626; }
+  .matched  .bio-text h3 { color: #16a34a; }
+  .bio-text p { font-size: 11px; color: #64748b; }
+
+  .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .metric-card {
+    background: #f8fafc; border: 1px solid #e2e8f0;
+    border-radius: 8px; padding: 12px;
+  }
+  .metric-card .label { font-size: 10px; font-weight: 700;
+                         letter-spacing: 1px; color: #94a3b8; margin-bottom: 6px; }
+  .metric-card .value { font-size: 24px; font-weight: 800; color: #1e293b; }
+  .metric-bar {
+    height: 4px; background: #e2e8f0; border-radius: 2px; margin-top: 8px;
+  }
+  .metric-fill { height: 100%; border-radius: 2px; background: #3b82f6; transition: width 1s; }
+
+  /* ── Bottom row ──────────────────────────── */
+  .bottom-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 16px; padding: 0 28px 28px;
+  }
+  @media (max-width: 800px) { .bottom-grid { grid-template-columns: 1fr; } }
+
+  .tag-sec  { font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+              color: #6366f1; background: #eef2ff; border: 1px solid #c7d2fe;
+              border-radius: 20px; padding: 2px 10px; }
+  .tag-audit{ font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+              color: #0891b2; background: #ecfeff; border: 1px solid #a5f3fc;
+              border-radius: 20px; padding: 2px 10px; }
+  .tag-eth  { font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+              color: #7c3aed; background: #f5f3ff; border: 1px solid #ddd6fe;
+              border-radius: 20px; padding: 2px 10px; }
+
+  .hash-box {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #f1f5f9; border: 1px solid #e2e8f0;
+    border-radius: 8px; padding: 10px 14px; margin-top: 12px; gap: 10px;
+  }
+  .hash-text {
+    font-family: monospace; font-size: 12px; color: #475569;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;
+  }
+  .btn-copy {
+    flex-shrink: 0; padding: 5px 12px;
+    background: #1e293b; color: #fff;
+    border: none; border-radius: 6px; font-size: 11px;
+    font-weight: 600; cursor: pointer; transition: background .2s;
+  }
+  .btn-copy:hover { background: #334155; }
+  .hash-sub { font-size: 11px; color: #94a3b8; margin-top: 6px; }
+
+  .ledger-box {
+    display: flex; align-items: flex-start; gap: 10px;
+    background: #f8fafc; border: 1px solid #e2e8f0;
+    border-radius: 8px; padding: 12px; margin-top: 12px;
+  }
+  .ledger-icon {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 2px solid #e2e8f0; display: flex; align-items: center;
+    justify-content: center; font-size: 14px; flex-shrink: 0;
+  }
+  .ledger-title { font-size: 13px; font-weight: 700; }
+  .ledger-sub   { font-size: 11px; color: #64748b; margin-top: 2px; }
+  .ledger-link  { font-size: 11px; color: #3b82f6; text-decoration: none;
+                  word-break: break-all; margin-top: 4px; display: block; }
+  .ledger-link:hover { text-decoration: underline; }
+  .ledger-box.verified   { background: #f0fdf4; border-color: #bbf7d0; }
+  .ledger-box.unverified { background: #f8fafc; border-color: #e2e8f0; }
+
+  /* ── Progress log ────────────────────────── */
+  .progress-panel {
+    background: #0f172a; border-radius: 10px;
+    padding: 14px; margin: 4px 28px 0; display: none;
+  }
+  .progress-panel.show { display: block; }
+  .progress-panel h4 { font-size: 11px; font-weight: 700; color: #94a3b8;
+                        letter-spacing: 1.5px; margin-bottom: 8px; }
+  .log-line { font-size: 12px; font-family: monospace; padding: 2px 0; }
+  .log-line .ts   { color: #475569; margin-right: 6px; }
+  .log-line .s1   { color: #60a5fa; }
+  .log-line .s2   { color: #a78bfa; }
+  .log-line .s3   { color: #34d399; }
+  .log-line .msg  { color: #e2e8f0; }
+  .log-line.done  .msg { color: #4ade80; }
+  .log-line.error .msg { color: #f87171; }
+
+  /* ── Spinner ─────────────────────────────── */
+  .spinner {
+    display: inline-block; width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff; border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Placeholder state ───────────────────── */
+  .placeholder { color: #94a3b8; font-style: italic; font-size: 13px; padding: 10px 0; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="brand">
+    <div class="logo-box">AI</div>
+    <div class="brand-text">
+      <h1>AI FACE ENGINE v2.4</h1>
+      <p>HACKATHON 2026 &nbsp;·&nbsp; FACIAL RECOGNITION &amp; IDENTITY INTELLIGENCE</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="deep-search-badge">
+      <span class="pulse"></span>
+      Deep Search Active
+    </div>
+    <div class="system-badge">
+      <div class="label">SYSTEM ENGINE</div>
+      <div class="val" id="system-status">READY</div>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="powered">⚡ POWERED BY AI &nbsp;·&nbsp; Facial Recognition &amp; Identity Intelligence</div>
+  <h2>Find Faces. <span>Unlock Profiles.</span></h2>
+  <p><strong>ONE PHOTO. ALL SOCIALS.</strong> Upload a photo to search across indexed public social profiles, mugshots, and web databases in seconds.</p>
+  <div class="networks">
+    <div class="net-tag"><span class="dot" style="background:#e1306c"></span>Instagram</div>
+    <div class="net-tag"><span class="dot" style="background:#1da1f2"></span>X / Twitter</div>
+    <div class="net-tag"><span class="dot" style="background:#010101"></span>TikTok</div>
+    <div class="net-tag"><span class="dot" style="background:#1877f2"></span>Facebook</div>
+    <div class="net-tag"><span class="dot" style="background:#ff0000"></span>YouTube</div>
+    <div class="net-tag"><span class="dot" style="background:#4285f4"></span>Web &amp; Blogs</div>
+  </div>
+</div>
+
+<!-- PROGRESS LOG (hidden until running) -->
+<div class="progress-panel" id="progress-panel">
+  <h4>&#9658; PIPELINE LOG</h4>
+  <div id="log-lines"></div>
+</div>
+
+<!-- MAIN GRID -->
+<div class="main-grid">
+
+  <!-- LEFT: Upload -->
+  <div class="card">
+    <div class="card-header">
+      <div><span class="step-badge">STEP 01</span><span class="card-title">Upload Face Photo</span></div>
+      <span class="card-tag">FACIAL RECOGNITION</span>
+    </div>
+
+    <div id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <div class="drop-label" id="drop-label">
+        <div class="icon">📷</div>
+        <p>Click to upload or drag &amp; drop<br><small style="color:#94a3b8">JPG, PNG up to 16MB</small></p>
+      </div>
+      <div class="drop-overlay" id="drop-overlay">Photo Ready for AI Scan</div>
+    </div>
+    <input type="file" id="file-input" accept="image/*" onchange="onFileSelect(this)">
+
+    <div class="repos">
+      <label class="section">TARGET REPOSITORIES:</label>
+      <div class="repo-grid">
+        <label class="repo-item"><input type="checkbox" checked> Social Media</label>
+        <label class="repo-item"><input type="checkbox" checked> Mugshots</label>
+        <label class="repo-item"><input type="checkbox" checked> Scammers</label>
+        <label class="repo-item"><input type="checkbox" checked> Videos</label>
+        <label class="repo-item"><input type="checkbox" checked> News &amp; Blogs</label>
+        <label class="repo-item"><input type="checkbox"> Dark Web</label>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-ghost" onclick="resetUI()">Change Photo</button>
+      <button class="btn-search" id="btn-scan" onclick="startScan()" disabled>
+        <span id="btn-icon">🔍</span>
+        <span id="btn-text">Search Internet by Face</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- RIGHT: Candidate -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <span class="match-tag">MATCH</span>
+        <span class="card-title" style="margin-left:8px">Primary Candidate</span>
+      </div>
+      <span class="card-tag">TOP MATCH</span>
+    </div>
+
+    <div class="candidate-box" id="candidate-box">
+      <div class="candidate-photo" id="cand-photo">👤</div>
+      <div class="candidate-info">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span class="cand-label">CANDIDATE #1</span>
+          <span class="cand-match" id="cand-match-pct">--</span>
+        </div>
+        <div id="cand-badge" class="unconfirmed-badge" style="display:inline-block;margin:4px 0">UNCONFIRMED</div>
+        <div class="cand-name" id="cand-name">No Candidate Found</div>
+        <div class="cand-source" id="cand-source">🌐 Source: —</div>
+      </div>
+    </div>
+
+    <!-- Biometric -->
+    <div style="margin-top:18px">
+      <div class="card-header" style="margin-bottom:8px">
+        <div><span class="step-badge">STEP 02</span><span class="card-title">Biometric Verification</span></div>
+        <span class="card-tag">AI ANALYSIS</span>
+      </div>
+
+      <div class="bio-result no-match" id="bio-result">
+        <div class="bio-icon">❌</div>
+        <div class="bio-text">
+          <h3 id="bio-verdict">NO EXACT MATCH</h3>
+          <p id="bio-sub">No registered face exceeded the 50% confidence threshold.</p>
+        </div>
+      </div>
+
+      <div class="metrics">
+        <div class="metric-card">
+          <div class="label">NEURAL FACE SIMILARITY</div>
+          <div class="value" id="sim-value">0.0%</div>
+          <div class="metric-bar"><div class="metric-fill" id="sim-bar" style="width:0%"></div></div>
+        </div>
+        <div class="metric-card">
+          <div class="label">CONFIDENCE THRESHOLD</div>
+          <div class="value">50.0%</div>
+          <div class="metric-bar"><div class="metric-fill" style="width:50%;background:#94a3b8"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM GRID -->
+<div class="bottom-grid">
+
+  <!-- Cryptographic Fingerprint -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <span class="tag-sec">SECURITY</span>
+        <span class="card-title" style="margin-left:8px">Cryptographic Fingerprint</span>
+      </div>
+      <span class="card-tag">SHA-256</span>
+    </div>
+    <p style="font-size:12px;color:#64748b">Immutable cryptographic hash verifying image integrity on the decentralized ledger.</p>
+    <div class="hash-box">
+      <div class="hash-text" id="fp-hash">— Run a scan to generate fingerprint —</div>
+      <button class="btn-copy" id="copy-btn" onclick="copyHash()" style="display:none">Copy Hash</button>
+    </div>
+    <div class="hash-sub" id="fp-sub"></div>
+  </div>
+
+  <!-- Ledger Verification -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <span class="tag-audit">AUDIT</span>
+        <span class="card-title" style="margin-left:8px">Ledger Verification</span>
+      </div>
+      <span class="tag-eth">ETHEREUM L2</span>
+    </div>
+    <div class="ledger-box unverified" id="ledger-box">
+      <div class="ledger-icon" id="ledger-icon">🔷</div>
+      <div>
+        <div class="ledger-title" id="ledger-title">Awaiting Scan</div>
+        <div class="ledger-sub"  id="ledger-sub">Run a face scan to record proof on the Ethereum Sepolia testnet.</div>
+        <a class="ledger-link" id="etherscan-link" href="#" style="display:none" target="_blank"></a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let currentFile = null;
+let pollInterval = null;
+
+/* ── File select ────────────────────────── */
+function onFileSelect(inp) {
+  const file = inp.files[0];
+  if (!file) return;
+  currentFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const dz = document.getElementById('drop-zone');
+    // remove old img
+    const old = dz.querySelector('img');
+    if (old) old.remove();
+    const img = document.createElement('img');
+    img.src = e.target.result;
+    dz.prepend(img);
+    document.getElementById('drop-label').style.display = 'none';
+    document.getElementById('drop-overlay').style.display = 'block';
+    document.getElementById('btn-scan').disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ── Reset ──────────────────────────────── */
+function resetUI() {
+  currentFile = null;
+  document.getElementById('file-input').value = '';
+  const dz = document.getElementById('drop-zone');
+  const old = dz.querySelector('img');
+  if (old) old.remove();
+  document.getElementById('drop-label').style.display = '';
+  document.getElementById('drop-overlay').style.display = 'none';
+  document.getElementById('btn-scan').disabled = true;
+  document.getElementById('btn-text').textContent = 'Search Internet by Face';
+  document.getElementById('btn-icon').textContent = '🔍';
+  document.getElementById('system-status').textContent = 'READY';
+  document.getElementById('progress-panel').classList.remove('show');
+  document.getElementById('log-lines').innerHTML = '';
+
+  // Reset candidate
+  setCandidate(null);
+  setSimilarity(0);
+  setFingerprint(null, null);
+  setLedger(null, false);
+
+  if (pollInterval) clearInterval(pollInterval);
+}
+
+/* ── Start scan ─────────────────────────── */
+function startScan() {
+  if (!currentFile) return;
+  const btn = document.getElementById('btn-scan');
+  btn.disabled = true;
+  document.getElementById('btn-icon').innerHTML = '<span class="spinner"></span>';
+  document.getElementById('btn-text').textContent = 'Scanning...';
+  document.getElementById('system-status').textContent = 'SCANNING';
+  document.getElementById('progress-panel').classList.add('show');
+  document.getElementById('log-lines').innerHTML = '';
+
+  const fd = new FormData();
+  fd.append('photo', currentFile);
+  fd.append('mock', 'false');
+
+  fetch('/scan', { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) { showError(data.error); return; }
+      pollJob(data.job_id);
+    })
+    .catch(e => showError(e.toString()));
+}
+
+/* ── Poll job ───────────────────────────── */
+function pollJob(job_id) {
+  pollInterval = setInterval(() => {
+    fetch('/status/' + job_id)
+      .then(r => r.json())
+      .then(job => {
+        renderLogs(job.logs || []);
+        if (job.status === 'done')  { clearInterval(pollInterval); renderDone(job); }
+        if (job.status === 'error') { clearInterval(pollInterval); showError(job.error); }
+      });
+  }, 1500);
+}
+
+/* ── Render logs ────────────────────────── */
+function renderLogs(logs) {
+  const box = document.getElementById('log-lines');
+  box.innerHTML = '';
+  logs.forEach(l => {
+    const d = document.createElement('div');
+    d.className = 'log-line ' + (l.status || '');
+    const sc = l.stage === '1' ? 's1' : l.stage === '2' ? 's2' : 's3';
+    d.innerHTML =
+      '<span class="ts">' + l.t + '</span>' +
+      '<span class="' + sc + '">[STAGE ' + l.stage + ']</span> ' +
+      '<span class="msg">' + l.msg + '</span>';
+    box.appendChild(d);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+/* ── Render final results ───────────────── */
+function renderDone(job) {
+  document.getElementById('btn-icon').textContent = '✅';
+  document.getElementById('btn-text').textContent = 'Scan Complete';
+  document.getElementById('system-status').textContent = 'SCAN COMPLETED';
+  document.getElementById('btn-scan').disabled = false;
+
+  // Candidate
+  const best = job.search && job.search.best_match;
+  setCandidate(best);
+
+  // Similarity
+  setSimilarity(job.similarity || 0);
+
+  // Fingerprint
+  setFingerprint(job.fingerprint, job.chain);
+
+  // Ledger
+  setLedger(job.chain, job.verified);
+}
+
+/* ── Set candidate card ─────────────────── */
+function setCandidate(best) {
+  const name   = document.getElementById('cand-name');
+  const source = document.getElementById('cand-source');
+  const badge  = document.getElementById('cand-badge');
+  const pct    = document.getElementById('cand-match-pct');
+  const photo  = document.getElementById('cand-photo');
+
+  if (!best || !best.title) {
+    name.textContent = 'No Candidate Found';
+    source.textContent = '🌐 Source: —';
+    badge.className = 'unconfirmed-badge'; badge.textContent = 'UNCONFIRMED';
+    pct.textContent = '--';
+    photo.innerHTML = '👤';
+    return;
+  }
+
+  name.textContent = best.title;
+  source.innerHTML = '🌐 <a href="' + best.link + '" target="_blank" style="color:#3b82f6;text-decoration:none">' +
+                     (best.source || best.link.replace(/https?:\/\//,'').split('/')[0]) + '</a>';
+  badge.className = 'confirmed-badge'; badge.textContent = 'FOUND';
+  pct.textContent = '';
+
+  // thumbnail
+  if (best.thumbnail) {
+    photo.innerHTML = '<img src="' + best.thumbnail + '" alt="match" onerror="this.parentNode.innerHTML=\'👤\'">';
+  } else {
+    photo.innerHTML = '🧑';
+  }
+}
+
+/* ── Set similarity ─────────────────────── */
+function setSimilarity(sim) {
+  document.getElementById('sim-value').textContent = sim.toFixed(1) + '%';
+  document.getElementById('sim-bar').style.width = Math.min(sim, 100) + '%';
+  document.getElementById('sim-bar').style.background = sim >= 50 ? '#10b981' : '#f59e0b';
+
+  const bio = document.getElementById('bio-result');
+  const verdict = document.getElementById('bio-verdict');
+  const sub = document.getElementById('bio-sub');
+  const pct = document.getElementById('cand-match-pct');
+
+  if (sim >= 50) {
+    bio.className = 'bio-result matched';
+    bio.querySelector('.bio-icon').textContent = '✅';
+    verdict.textContent = 'MATCH CONFIRMED';
+    sub.textContent = 'Face similarity exceeds the 50% confidence threshold.';
+    pct.textContent = 'Match: ' + sim.toFixed(1) + '%';
+    pct.style.color = '#10b981';
+  } else {
+    bio.className = 'bio-result no-match';
+    bio.querySelector('.bio-icon').textContent = '❌';
+    verdict.textContent = 'NO EXACT MATCH';
+    sub.textContent = 'No registered face exceeded the 50% confidence threshold.';
+    pct.textContent = sim > 0 ? 'Match: ' + sim.toFixed(1) + '%' : '0.0%';
+    pct.style.color = '#f59e0b';
+  }
+}
+
+/* ── Set fingerprint ────────────────────── */
+function setFingerprint(fp, chain) {
+  const el = document.getElementById('fp-hash');
+  const sub = document.getElementById('fp-sub');
+  const btn = document.getElementById('copy-btn');
+  if (!fp) {
+    el.textContent = '— Run a scan to generate fingerprint —';
+    sub.textContent = '';
+    btn.style.display = 'none';
+    return;
+  }
+  el.textContent = fp;
+  btn.style.display = '';
+  sub.textContent = chain && chain.mock ? 'Mock fingerprint (--mock mode)' :
+                    'Anchored to Ethereum Sepolia blockchain';
+}
+
+function copyHash() {
+  const txt = document.getElementById('fp-hash').textContent;
+  navigator.clipboard.writeText(txt).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy Hash', 1500);
+  });
+}
+
+/* ── Set ledger ─────────────────────────── */
+function setLedger(chain, verified) {
+  const box   = document.getElementById('ledger-box');
+  const icon  = document.getElementById('ledger-icon');
+  const title = document.getElementById('ledger-title');
+  const sub   = document.getElementById('ledger-sub');
+  const link  = document.getElementById('etherscan-link');
+
+  if (!chain) {
+    box.className = 'ledger-box unverified';
+    icon.textContent = '🔷';
+    title.textContent = 'Awaiting Scan';
+    sub.textContent = 'Run a face scan to record proof on the Ethereum Sepolia testnet.';
+    link.style.display = 'none';
+    return;
+  }
+
+  if (chain.mock) {
+    box.className = 'ledger-box unverified';
+    icon.textContent = '🧪';
+    title.textContent = 'Mock Ledger (Test Mode)';
+    sub.textContent = 'TX: ' + chain.tx_hash;
+    link.style.display = 'none';
+    return;
+  }
+
+  if (verified) {
+    box.className = 'ledger-box verified';
+    icon.textContent = '✅';
+    title.textContent = 'Verified Signature';
+    sub.textContent = 'TX: ' + chain.tx_hash.substring(0, 30) + '...';
+  } else {
+    box.className = 'ledger-box unverified';
+    icon.textContent = '⚠️';
+    title.textContent = 'Unverified Signature';
+    sub.textContent = 'Hash could not be validated on contract.';
+  }
+
+  if (chain.etherscan_url) {
+    link.href = chain.etherscan_url;
+    link.textContent = '🔗 View on Etherscan';
+    link.style.display = 'block';
+  }
+}
+
+/* ── Show error ─────────────────────────── */
+function showError(msg) {
+  document.getElementById('system-status').textContent = 'ERROR';
+  document.getElementById('btn-icon').textContent = '❌';
+  document.getElementById('btn-text').textContent = 'Scan Failed — Try Again';
+  document.getElementById('btn-scan').disabled = false;
+  const box = document.getElementById('log-lines');
+  const d = document.createElement('div');
+  d.className = 'log-line error';
+  d.innerHTML = '<span class="msg">ERROR: ' + msg + '</span>';
+  box.appendChild(d);
+}
+
+/* ── Drag & drop ────────────────────────── */
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor='#3b82f6'; });
+dz.addEventListener('dragleave', () => { dz.style.borderColor=''; });
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.style.borderColor='';
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    const inp = document.getElementById('file-input');
+    const dt = new DataTransfer(); dt.items.add(file);
+    inp.files = dt.files;
+    onFileSelect(inp);
+  }
+});
+</script>
+</body>
+</html>
